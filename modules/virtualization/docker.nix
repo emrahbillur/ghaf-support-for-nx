@@ -14,6 +14,10 @@ in
 
     config = mkIf cfg.enable {
       virtualisation.docker.enable = true;
+      #Since nvidia docker is not supporting cdi it fails.
+      #virtualisation.docker.enableNvidia = true;
+      virtualisation.podman.enable = true;
+      virtualisation.podman.enableNvidia = true;
       virtualisation.docker.rootless = {
         enable = true;
         setSocketVariable = true;

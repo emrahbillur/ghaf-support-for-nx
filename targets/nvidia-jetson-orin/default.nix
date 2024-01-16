@@ -46,6 +46,7 @@
           ../../modules/hardware/nvidia-jetson-orin
           microvm.nixosModules.host
           ../../modules/host
+          ../../modules/virtualization/docker.nix
           ../../modules/virtualization/microvm/microvm-host.nix
           ../../modules/virtualization/microvm/netvm.nix
           ({config, ...}: {
@@ -56,7 +57,7 @@
                 agx.enableNetvmWlanPCIPassthrough = som == "agx";
                 nx.enableNetvmEthernetPCIPassthrough = som == "nx";
               };
-
+              
               hardware.nvidia = {
                 virtualization.enable = false;
                 virtualization.host.bpmp.enable = false;
