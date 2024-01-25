@@ -52,7 +52,10 @@ in
       };
 
       nixpkgs.hostPlatform.system = "aarch64-linux";
-
+      #Needed for CUDA and nvidia
+      nixpkgs.config.allowUnfree = true;
+      nixpkgs.config.enableCuda = true;
+      nixpkgs.config.cudaSupport = true;
       ghaf.boot.loader.systemd-boot-dtb.enable = true;
 
       boot.loader = {

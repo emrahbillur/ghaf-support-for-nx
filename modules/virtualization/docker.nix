@@ -13,14 +13,30 @@ in
     };
 
     config = mkIf cfg.enable {
-      virtualisation.docker.enable = true;
-      #Since nvidia docker is not supporting cdi it fails.
-      #virtualisation.docker.enableNvidia = true;
-      virtualisation.podman.enable = true;
-      virtualisation.podman.enableNvidia = true;
-      virtualisation.docker.rootless = {
-        enable = true;
-        setSocketVariable = true;
+      virtualisation = {
+        ## The docker version 24 does not support CDI interface 
+        ## So disable docker and use podman in docker compatibility mode.
+        #docker = {
+        #  enable = true;
+        #  rootless = 
+        #  {
+        #    enable = true;
+        #    setSocketVariable = true;
+        #  };
+        #};
+        
+        podman = {
+          enable = true;
+          
+          # Create a `docker` alias for podman, to use it as a drop-in replacement
+          dockerCompat = true;
+
+          # Enabling CDI NVIDIA devices in podman 
+          enableNvidia = true;
+
+          # Required for containers under podman-compose to be able to talk to each other.
+          defaultNetwork.settings.dns_enabled = true;
+        };
       };
     };
   }

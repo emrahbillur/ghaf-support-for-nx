@@ -3,8 +3,10 @@
 #
 # This overlay customizes ghaf packages
 #
+
 _: {
   nixpkgs.overlays = [
+    (import ./conmon)
     (import ./gala)
     (import ./systemd)
     (import ./waypipe)

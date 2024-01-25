@@ -58,6 +58,8 @@
                 nx.enableNetvmEthernetPCIPassthrough = som == "nx";
               };
               
+              virtualization.docker.daemon.enable = true;
+              
               hardware.nvidia = {
                 virtualization.enable = false;
                 virtualization.host.bpmp.enable = false;
