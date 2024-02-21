@@ -44,6 +44,9 @@ in
         carrierBoard = "${cfg.carrierBoard}";
         modesetting.enable = true;
 
+      #enableCuda = true;
+      #cudaSupport = true;
+      
         flashScriptOverrides = lib.optionalAttrs (cfg.somType == "agx") {
           flashArgs = lib.mkForce ["-r" config.hardware.nvidia-jetpack.flashScriptOverrides.targetBoard "mmcblk0p1"];
         };
@@ -52,10 +55,7 @@ in
       };
 
       nixpkgs.hostPlatform.system = "aarch64-linux";
-      #Needed for CUDA and nvidia
-      nixpkgs.config.allowUnfree = true;
-      nixpkgs.config.enableCuda = true;
-      nixpkgs.config.cudaSupport = true;
+      
       ghaf.boot.loader.systemd-boot-dtb.enable = true;
 
       boot.loader = {

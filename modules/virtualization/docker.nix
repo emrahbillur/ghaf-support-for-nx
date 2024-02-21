@@ -38,5 +38,7 @@ in
           defaultNetwork.settings.dns_enabled = true;
         };
       };
+      # Enable Opengl
+      hardware.opengl.enable = true;
     };
   }

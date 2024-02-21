@@ -50,6 +50,13 @@
           ../../modules/virtualization/microvm/microvm-host.nix
           ../../modules/virtualization/microvm/netvm.nix
           ({config, ...}: {
+            #Needed for CUDA and nvidia  
+            nixpkgs.config.allowUnfree = true;
+            nixpkgs.config.allowBroken = false;
+            nixpkgs.config.cudaSupport = true;
+            nixpkgs.config.cudaCapabilities = "7.2";
+            #nixpkgs.config.cudaPackages.autoAddOpenGLRunpathHook = true;
+          
             ghaf = {
               hardware.nvidia.orin = {
                 enable = true;
@@ -68,7 +75,7 @@
 
               virtualization.microvm-host.enable = true;
               host.networking.enable = true;
-
+              
               virtualization.microvm.netvm.enable = true;
               virtualization.microvm.netvm.extraModules = netvmExtraModules;
 

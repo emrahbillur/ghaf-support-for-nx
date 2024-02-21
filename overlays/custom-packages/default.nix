@@ -7,6 +7,7 @@
 _: {
   nixpkgs.overlays = [
     (import ./conmon)
+    (import ./cuda)
     (import ./gala)
     (import ./systemd)
     (import ./waypipe)
