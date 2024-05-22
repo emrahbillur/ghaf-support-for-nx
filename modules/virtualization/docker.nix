@@ -24,7 +24,11 @@ in
         #    setSocketVariable = true;
         #  };
         #};
-        
+        ## This change is temporary for the current nixpkgs release as in the next nixpkgs release
+        ## the following changes will be incoming:
+        ## virtualisation.containers.cdi.dynamic.nvidia.enable instead of virtualisation.docker.enableNvidia
+        ## nvidia-container-toolkit-cdi-generator.service instead of nvidia-cdi-generate.service    
+
         podman = {
           enable = true;
           
@@ -40,5 +44,9 @@ in
       };
       # Enable Opengl
       hardware.opengl.enable = true;
+      systemd.services.nvidia-cdi-generate.after = [ "systemd-udev-settle.service" "ghaf-session.service" ];
+      
+      #Default route to netvm
+      systemd.network.networks."10-virbr0".gateway = [ "192.168.101.1" ];
     };
   }
