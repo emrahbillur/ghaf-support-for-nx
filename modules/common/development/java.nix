@@ -18,5 +18,8 @@ in
         enable = true;
         package = pkgs.jdk20;
       };
+      environment.variables = {
+        LD_LIBRARY_PATH = pkgs.libGL.outPath+"/lib";
+      };
     };
   }
