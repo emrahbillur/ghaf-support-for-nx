@@ -7,7 +7,7 @@
   ...
 }: let
   cfg = config.ghaf.profiles.graphics;
-  compositors = ["weston" "labwc" "gnome"];
+  compositors = ["labwc" "gnome"];
   inherit (lib) mkEnableOption mkOption types mkIf;
 in {
   options.ghaf.profiles.graphics = {

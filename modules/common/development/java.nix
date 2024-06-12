@@ -16,7 +16,7 @@ in
     config = mkIf cfg.enable {
       programs.java = {
         enable = true;
-        package = pkgs.jdk20;
+        package = pkgs.jdk21;
       };
       environment.variables = {
         LD_LIBRARY_PATH = pkgs.libGL.outPath+"/lib";
