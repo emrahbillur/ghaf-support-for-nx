@@ -8,16 +8,6 @@
   configH,
   ...
 }: let
-  netvmPCIPassthroughModule = {
-    microvm.devices = lib.mkForce (
-      builtins.map (d: {
-        bus = "pci";
-        inherit (d) path;
-      })
-      configH.ghaf.hardware.definition.network.pciDevices
-    );
-  };
-
   netvmAdditionalConfig = let
     externalNic = let
       firstPciWifiDevice = lib.head configH.ghaf.hardware.definition.network.pciDevices;
@@ -25,15 +15,21 @@
 
     internalNic = let
       vmNetworking = import ../../modules/microvm/virtualization/microvm/common/vm-networking.nix {
+        config = configH;
+        inherit lib;
         vmName = microvm.name;
         inherit (microvm) macAddress;
+        internalIP = 1;
       };
     in "${lib.head vmNetworking.networking.nat.internalInterfaces}";
 
-    elemen-vmIp = "192.168.100.253";
+    element-vmIp = "192.168.100.103";
   in {
     # For WLAN firmwares
-    hardware.enableRedistributableFirmware = true;
+    hardware = {
+      enableRedistributableFirmware = true;
+      enableAllFirmware = true;
+    };
 
     networking = {
       # wireless is disabled because we use NetworkManager for wireless
@@ -43,6 +39,7 @@
         unmanaged = ["ethint0"];
       };
     };
+
     services = {
       dnsmasq.settings = {
         # set static IP for IDS-VM
@@ -61,7 +58,7 @@
           ];
 
         # DNS host record has been added for element-vm static ip
-        host-record = "element-vm,element-vm.ghaf,${elemen-vmIp}";
+        host-record = "element-vm,element-vm,${element-vmIp}";
       };
 
       openssh = configH.ghaf.security.sshKeys.sshAuthorizedKeysCommand;
@@ -96,14 +93,15 @@
       systemPackages = lib.mkIf configH.ghaf.profiles.debug.enable [pkgs.wifi-connector-nmcli pkgs.tcpdump];
     };
 
-    time.timeZone = "Asia/Dubai";
+    time.timeZone = configH.time.timeZone;
 
     ghaf.services.dendrite-pinecone = {
       enable = true;
       firewallConfig = true;
       externalNic = "${externalNic}";
       internalNic = "${internalNic}";
-      serverIpAddr = "${elemen-vmIp}";
+      serverIpAddr = "${element-vmIp}";
     };
   };
+  inherit (configH.ghaf.hardware.passthrough) netvmPCIPassthroughModule;
 in [netvmPCIPassthroughModule netvmAdditionalConfig]

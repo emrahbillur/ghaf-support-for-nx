@@ -52,6 +52,7 @@
           self.nixosModules.jetpack
           self.nixosModules.jetpack-microvm
           self.nixosModules.microvm
+          self.nixosModules.reference-programs
 
           {
             ghaf = {
@@ -92,6 +93,9 @@
                 debug.enable = variant == "debug";
               };
               windows-launcher.enable = true;
+              graphics.labwc.renderer = "egl2";
+              # To enable screen locking set to true
+              graphics.labwc.autolock.enable = false;
             };
           }
 

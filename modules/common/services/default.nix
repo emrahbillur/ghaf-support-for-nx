@@ -3,5 +3,7 @@
 {
   imports = [
     ./dendrite-pinecone.nix
+    ./fprint.nix
+    ./audio.nix
   ];
 }

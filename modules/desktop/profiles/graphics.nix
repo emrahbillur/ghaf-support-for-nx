@@ -8,15 +8,15 @@
 }: let
   cfg = config.ghaf.profiles.graphics;
   compositors = ["weston" "labwc" "gnome"];
-in
-  with lib; {
-    options.ghaf.profiles.graphics = {
-      enable = mkEnableOption "Graphics profile";
-      compositor = mkOption {
-        type = types.enum compositors;
+  inherit (lib) mkEnableOption mkOption types mkIf;
+in {
+  options.ghaf.profiles.graphics = {
+    enable = mkEnableOption "Graphics profile";
+    compositor = mkOption {
+      type = types.enum compositors;
         default = "gnome";
-        description = ''
-          Which Wayland compositor to use.
+      description = ''
+        Which Wayland compositor to use.
 
           Choose one of: ${lib.concatStringsSep "," compositors}
         '';
@@ -47,10 +47,7 @@ in
       enableDemoApplications = mkEnableOption "some applications for demoing";
     };
 
-    config = mkIf cfg.enable {
-      ghaf.graphics.weston.enable = cfg.compositor == "weston";
-      ghaf.graphics.labwc.enable = cfg.compositor == "labwc";
-      #ghaf.graphics.sway.enable = cfg.compositor == "sway";
+  config = mkIf cfg.enable {
       ghaf.graphics.gnome.enable = cfg.compositor == "gnome";
     };
   }

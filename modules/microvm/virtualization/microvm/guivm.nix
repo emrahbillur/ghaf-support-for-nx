@@ -9,9 +9,13 @@
   configHost = config;
   vmName = "gui-vm";
   macAddress = "02:00:00:02:02:02";
+  inherit (import ../../../../lib/launcher.nix {inherit pkgs lib;}) rmDesktopEntries;
   guivmBaseConfiguration = {
     imports = [
-      (import ./common/vm-networking.nix {inherit vmName macAddress;})
+      (import ./common/vm-networking.nix {
+        inherit config lib vmName macAddress;
+        internalIP = 3;
+      })
       ({
         lib,
         pkgs,
@@ -24,8 +28,8 @@
             applications.enable = false;
             graphics.enable = true;
           };
-          # To enable screen locking set graphics.labwc.lock to true
-          graphics.labwc.lock.enable = false;
+          # To enable screen locking set to true
+          graphics.labwc.autolock.enable = false;
           windows-launcher.enable = false;
           development = {
             ssh.daemon.enable = lib.mkDefault configHost.ghaf.development.ssh.daemon.enable;
@@ -39,6 +43,7 @@
             withResolved = true;
             withTimesyncd = true;
             withDebug = configHost.ghaf.profiles.debug.enable;
+            withHardenedConfigs = true;
           };
         };
 
@@ -66,10 +71,13 @@
 
         environment = {
           systemPackages =
-            [
+            (rmDesktopEntries [
               pkgs.waypipe
               pkgs.networkmanagerapplet
+            ])
+            ++ [
               pkgs.nm-launcher
+              pkgs.pamixer
             ]
             ++ (lib.optional (configHost.ghaf.profiles.debug.enable && configHost.ghaf.virtualization.microvm.idsvm.mitmproxy.enable) pkgs.mitmweb-ui);
         };
@@ -122,27 +130,18 @@
         ];
 
         # Waypipe service runs in the GUIVM and listens for incoming connections from AppVMs
-        systemd = {
-          user.services.waypipe = {
-            enable = true;
-            description = "waypipe";
-            after = ["weston.service" "labwc.service"];
-            serviceConfig = {
-              Type = "simple";
-              ExecStart = "${pkgs.waypipe}/bin/waypipe --vsock -s ${toString cfg.waypipePort} client";
-              Restart = "always";
-              RestartSec = "1";
-            };
-            startLimitIntervalSec = 0;
-            wantedBy = ["ghaf-session.target"];
+        systemd.user.services.waypipe = {
+          enable = true;
+          description = "waypipe";
+          after = ["labwc.service"];
+          serviceConfig = {
+            Type = "simple";
+            ExecStart = "${pkgs.waypipe}/bin/waypipe --vsock -s ${toString cfg.waypipePort} client";
+            Restart = "always";
+            RestartSec = "1";
           };
-
-          # Fixed IP-address for debugging subnet
-          network.networks."10-ethint0".addresses = [
-            {
-              addressConfig.Address = "192.168.101.3/24";
-            }
-          ];
+          startLimitIntervalSec = 0;
+          wantedBy = ["ghaf-session.target"];
         };
       })
     ];

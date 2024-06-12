@@ -3,11 +3,6 @@
 #
 # This overlay is for specific fixes needed only to enable cross-compilation.
 #
-(final: prev: {
-  chromium = import ./chromium {inherit prev final;};
-  edk2 = import ./edk2 {inherit final prev;};
-  jbig2dec = import ./jbig2dec {inherit prev;};
-  pipewire = import ./pipewire {inherit prev;};
-
-  qemu = import ./qemu {inherit prev;};
+(_final: prev: {
+  papirus-icon-theme = import ./papirus-icon-theme {inherit prev;};
 })
