@@ -154,6 +154,13 @@ in
           flash.xml
 
       ''
+      + lib.optionalString (config.hardware.nvidia-jetpack.som == "orin-agx-industrial")
+      ''
+        echo "============================================================"
+        echo "Patch of pinmux and system configuration for Milboard AGX   "
+        echo "============================================================"
+        @patch@ -p0 < ${./agx-milboard/pinmux-sysConfig.diff}
+      ''
       + lib.optionalString cfg.flashScriptOverrides.onlyQSPI ''
         echo "Flashing QSPI only, boot and root images not included."
       ''
