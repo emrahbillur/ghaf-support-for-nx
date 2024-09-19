@@ -3,6 +3,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }: let
   cfg = config.ghaf.hardware.nvidia.orin.agx;
@@ -22,8 +23,44 @@ in {
             path = "0001:01:00.0";
           }
         ];
+        environment.systemPackages = [ pkgs.networkmanager (lib.mkIf config.ghaf.profiles.debug.enable pkgs.tcpdump) ];
+        networking = {
+          # wireless is disabled because we use NetworkManager for wireless
+          wireless.enable = lib.mkForce false;
+          networkmanager = {
+            enable = true;
+            plugins = lib.mkForce [ ];
+            unmanaged = [ "ethint0" ];
+          };
+        };
+        environment = {
+          # noXlibs=false; needed for NetworkManager stuff
+          noXlibs = false;
+
+          etc."NetworkManager/system-connections/Wifi-1.nmconnection" = {
+            text = ''
+              [connection]
+              id=Wifi-1
+              uuid=33679db6-4cde-11ee-be56-0242ac120002
+              type=wifi
+              [wifi]
+              mode=infrastructure
+              ssid=SSID_OF_NETWORK
+              [wifi-security]
+              key-mgmt=wpa-psk
+              psk=WPA_PASSWORD
+              [ipv4]
+              method=auto
+              [ipv6]
+              method=disabled
+              [proxy]
+            '';
+            mode = "0600";
+          };
+        };
       }
     ];
+
 
     boot.kernelPatches = [
       {
