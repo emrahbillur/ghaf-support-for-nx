@@ -2,32 +2,30 @@
 # SPDX-License-Identifier: Apache-2.0
 { lib, config, ... }:
 let
-  cfg = config.ghaf.virtualization.docker.daemon;
+  cfg = config.ghaf.virtualization.podman.daemon;
   inherit (lib) mkEnableOption mkIf;
 in
 {
-  options.ghaf.virtualization.docker.daemon = {
-    enable = mkEnableOption "Docker Daemon";
+  options.ghaf.virtualization.podman.daemon = {
+    enable = mkEnableOption "Podman Daemon";
   };
-
   config = mkIf cfg.enable {
     # Just ensure containers are enabled by boot.
     boot.enableContainers = lib.mkForce true;
 
-    # For CUDA support unfree libraries and CudaSupport should be set
+    # For CUDA support: Enable if not already enabled.
     ghaf.development.cuda.enable = lib.mkForce true;
 
-    # Docker Daemon Settings
-    virtualisation.docker = {
-      # To force Docker package version settings
-      #package = pkgs.docker_26;
-
+    virtualisation.podman = {
       enable = true;
-      rootless = {
-        enable = true;
-        setSocketVariable = true;
-      };
-
+      # The enableNvidia option is still used in jetpack-nixos while it is obsolete in nixpkgs
+      # but it is still only option for nvidia-orin devices.
+      enableNvidia = config.nixpkgs.localSystem.isAarch64 && config.hardware.nvidia-jetpack.enable;
+      # Create a `docker` alias for podman, to use it as a drop-in replacement
+      dockerCompat = !config.virtualisation.docker.enable;
+      dockerSocket.enable = !config.virtualisation.docker.enable;
+      # Required for containers under podman-compose to be able to talk to each other.
+      defaultNetwork.settings.dns_enabled = true;
       # Container file and processor limits 
       # daemon.settings = {
       #   default-ulimits = {
@@ -59,10 +57,12 @@ in
     # Enable Opengl renamed to hardware.graphics.enable
     hardware.graphics.enable = lib.mkForce true;
 
-    # Add user to docker group and dialout group for access to serial ports
+    # Add user to podman and docker group (due to compatibility mode) 
+    # and dialout group for access to serial ports
     users.users."ghaf".extraGroups = [
       "docker"
       "dialout"
+      "podman"
     ];
   };
 }
