@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Release ghaf-24.06 - Ghaf Framework</title>
+        <title>Hardware Acceleration - Ghaf Framework</title>
 
 
         <!-- Custom HTML head -->
@@ -226,95 +226,125 @@
 
 </style>
 <!--
-    Copyright 2022-2024 TII (SSRC) and the Ghaf contributors
+    Copyright 2025 TII (SSRC) and the Ghaf contributors
     SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-<h1 id="release-ghaf-2406"><a class="header" href="#release-ghaf-2406">Release ghaf-24.06</a></h1>
-<h2 id="release-tag"><a class="header" href="#release-tag">Release Tag</a></h2>
-<p><a href="https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.06">https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.06</a></p>
-<h2 id="supported-hardware"><a class="header" href="#supported-hardware">Supported Hardware</a></h2>
-<p>The following target hardware is supported by this release:</p>
+<h1 id="hardware-acceleration-in-linux"><a class="header" href="#hardware-acceleration-in-linux">Hardware acceleration in Linux</a></h1>
+<p>Hardware acceleration refers to offloading certain tasks, typically graphical or computational, from the CPU to specialized hardware components like the GPU, video decoder/encoder, or other accelerators. This can greatly improve system performance and efficiency, especially for graphics rendering, video playback, and certain compute-heavy applications.</p>
+<h3 id="types-of-hardware-acceleration"><a class="header" href="#types-of-hardware-acceleration">Types of Hardware Acceleration</a></h3>
+<ol>
+<li><strong>GPU Acceleration (Graphics)</strong></li>
+</ol>
 <ul>
-<li>NVIDIA Jetson AGX Orin</li>
-<li>NVIDIA Jetson Orin NX</li>
-<li>Generic x86 (PC)</li>
-<li>Polarfire Icicle Kit</li>
-<li>Lenovo ThinkPad X1 Carbon Gen 11</li>
-<li>Lenovo ThinkPad X1 Carbon Gen 10</li>
-<li>NXP i.MX 8M Plus</li>
-</ul>
-<h2 id="what-is-new-in-ghaf-2406"><a class="header" href="#what-is-new-in-ghaf-2406">What is New in ghaf-24.06</a></h2>
+<li>
+<p>Used for rendering GUIs, 3D applications or desktops like <a href="https://github.com/labwc/labwc">labwc</a>, <a href="https://github.com/pop-os/cosmic-epoch">cosmic</a>.</p>
+</li>
+<li>
+<p>APIs involved:</p>
 <ul>
-<li>Added support for NXP i.MX 8M Plus.</li>
-<li>NixOS is updated to <a href="https://nixos.org/blog/announcements/2024/nixos-2405/">NixOS 24.05</a> further to nixos-unstable.</li>
-<li>labwc is used as a default compositor on all platforms. Weston is no longer supported.</li>
-<li>Static networking with external DNS server support only. Internal DHCP and DNS are removed.
-<ul>
-<li>This affects all new guest VM networking.</li>
-<li>Windows VM must be configured with static IP and DNS.</li>
+<li><strong>OpenGL / Vulkan</strong></li>
+<li><strong>Mesa 3D</strong> (open-source graphics library)</li>
 </ul>
 </li>
-<li>Lenovo X1 Carbon Gen 10/11:
+</ul>
+<ol start="2">
+<li><strong>Video Acceleration (Decode/Encode)</strong></li>
+</ol>
 <ul>
-<li>Image compression uses the <a href="https://github.com/facebook/zstd">Zstandard (zstd)</a> algorithm.</li>
-<li>Initial vTPM implementation for Application VMs is added.</li>
-<li>Audio VM with <a href="https://gitlab.freedesktop.org/pipewire/pipewire">PipeWire</a> backend and <a href="https://www.freedesktop.org/wiki/Software/PulseAudio/">PulseAudio</a> TCP remote communications layer.</li>
-<li>Multimedia function key passthrough.</li>
-<li>Initial implementation of <a href="../architecture/adr/idsvm.html">IDS VM</a> as a defensive network mechanism.</li>
-<li>Support for <a href="https://element.io/">Element</a> chat application.</li>
-<li>GPS location sharing through the Element application.</li>
+<li>
+<p>Useful for smooth playback of high-definition video.</p>
+</li>
+<li>
+<p>Libraries/interfaces:</p>
+<ul>
+<li><strong>VA-API (Video Acceleration API)</strong> – Intel, AMD</li>
+<li><strong>VDPAU</strong> (Video Decode and Presentation API for Unix) – NVIDIA</li>
+<li><strong>NVDEC / NVENC</strong> – NVIDIA proprietary decoding/encoding</li>
+<li><strong>V4L2 (Video4Linux)</strong> – General video capture/encode API</li>
 </ul>
 </li>
-<li>NVIDIA Jetson Orin NX:
+</ul>
+<ol start="3">
+<li><strong>Compute Acceleration</strong></li>
+</ol>
 <ul>
-<li>UARTI passthrough.</li>
-<li>The Jetpack baseline software updates and fixes.</li>
+<li>
+<p>Used in AI, ML, and general purpose GPU computing.</p>
+</li>
+<li>
+<p>Technologies:</p>
+<ul>
+<li><strong>OpenCL</strong> (open standard)</li>
+<li><strong>CUDA</strong> (NVIDIA-specific)</li>
 </ul>
 </li>
-<li>Further refactoring and modularization of Ghaf Framework.</li>
-<li>Development, testing, and performance tooling improvements.</li>
 </ul>
-<h2 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h2>
-<p>Fixed bugs that were in the ghaf-24.03 release:</p>
+<h3 id="-how-to-check-if-its-enabled"><a class="header" href="#-how-to-check-if-its-enabled">⚙️ How to Check If It's Enabled</a></h3>
+<ol>
+<li>
+<p><strong>GPU Info</strong></p>
+<pre><code class="language-sh">glxinfo | grep "OpenGL renderer"
+</code></pre>
+</li>
+<li>
+<p><strong>Video Acceleration Check</strong></p>
+<pre><code class="language-sh">vainfo      # For VA-API
+
+vdpauinfo   # For VDPAU
+</code></pre>
+</li>
+<li>
+<p><strong>GPU workload check</strong></p>
+<pre><code class="language-sh">intel_gpu_top # For Intel Platforms
+
+nvidia-smi    # For Nvidia Platforms
+</code></pre>
+</li>
+<li>
+<p><strong>General Acceleration</strong></p>
+</li>
+</ol>
 <ul>
-<li>Icons do not launch applications when a netvm is restarted.</li>
-<li>Closing and reopening a deck lid of a Lenovo ThinkPad X1 laptop with Ghaf running causes instability.</li>
+<li>
+<p>Monitor CPU usage during video playback using <code>htop</code> or <code>top</code>.</p>
+</li>
+<li>
+<p>If CPU usuage is low, hardware acceleration is likely working.</p>
+</li>
 </ul>
-<h2 id="known-issues-and-limitations"><a class="header" href="#known-issues-and-limitations">Known Issues and Limitations</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Issue</th><th>Status</th><th>Comments</th></tr></thead><tbody>
-<tr><td>Cannot log in to the Element chat with a Google account</td><td>In Progress</td><td>Workaround for x86: create a user specifically for Element.</td></tr>
-<tr><td>Windows launcher application does not work on AGX</td><td>In Progress</td><td>Workaround: launch a Windows VM from the command line.</td></tr>
-<tr><td>Time synchronization between host and VMs does not work in all scenarios</td><td>In Progress</td><td>Under investigation.</td></tr>
-<tr><td>Applications do not open from icons when netvm is restarted</td><td>In Progress</td><td>Workaround: restart AppVMs.</td></tr>
-<tr><td>Cannot connect to a hidden Wi-Fi network from GUI</td><td>In Progress</td><td>Workaround:  connect with SSH to a netvm and run the command: <code>nmcli dev wifi connect SSID password PASSWORD hidden yes</code>.</td></tr>
-<tr><td>NVIDIA Jetson AGX Orin and NVIDIA Jetson Orin NX: cannot make voice calls using the Element application</td><td>In Progress</td><td>Under investigation.</td></tr>
-<tr><td>The Element application cannot find a camera</td><td>In Progress</td><td>Under investigation.</td></tr>
-</tbody></table>
-</div>
-<h2 id="environment-requirements"><a class="header" href="#environment-requirements">Environment Requirements</a></h2>
-<p>There are no specific requirements for the environment with this release.</p>
-<h2 id="installation-instructions"><a class="header" href="#installation-instructions">Installation Instructions</a></h2>
-<p>Released images are available at <a href="https://archive.vedenemo.dev/ghaf-24.06/">archive.vedenemo.dev/ghaf-24.06</a>.</p>
-<p>Download the required image and use the following instructions:</p>
-<div class="table-wrapper"><table><thead><tr><th>Release Image</th><th>Build and Run</th></tr></thead><tbody>
-<tr><td>ghaf-24.06_Generic_x86.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-x86-computer">Running Ghaf Image for x86 Computer</a></td></tr>
-<tr><td>ghaf-24.06_Lenovo_X1_Carbon_Gen11.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-lenovo-x1">Running Ghaf Image for Lenovo X1</a></td></tr>
-<tr><td>ghaf-24.06_Nvidia_Orin_AGX_cross-compiled.tar.xz, ghaf-24.06_Nvidia_Orin_AGX_native-build.tar.xz, ghaf-24.06_Nvidia_Orin_NX_cross-compiled.tar.xz, ghaf-24.06_Nvidia_Orin_NX_native-build.tar.xz</td><td><a href="../ref_impl/build_and_run.html#ghaf-image-for-nvidia-jetson-orin-agx">Ghaf Image for NVIDIA Jetson Orin AGX</a></td></tr>
-<tr><td>ghaf-24.06_PolarFire_RISC-V.tar.xz</td><td><a href="../ref_impl/build_and_run.html#building-ghaf-image-for-microchip-icicle-kit">Building Ghaf Image for Microchip Icicle Kit</a></td></tr>
-</tbody></table>
-</div><!--
-    There is no image for NXP i.MX 8M Plus. We say that we added the nxp support in this release but there is no image to try it. Yes, this is dog.
--->
+<h3 id="-video-hardware-acceleration-support-in-browsers"><a class="header" href="#-video-hardware-acceleration-support-in-browsers">🎥 Video hardware acceleration support in browsers</a></h3>
+<ol>
+<li>
+<p>For Firefox</p>
+<ul>
+<li>
+<p>In URL type following:</p>
+<pre><code class="language-sh">about:support # Then scroll down to find Media section to find Codecs supported with Hardware Decoding
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>For Chrome</p>
+<ul>
+<li>
+<p>In URL type following:</p>
+<pre><code class="language-sh">chrome://gpu # Then scroll down to bottom to find `Video Acceleration Information`
+</code></pre>
+</li>
+</ul>
+</li>
+</ol>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../release_notes/ghaf-24.09.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../technologies/hypervisor_options.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../release_notes/ghaf-24.03.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../scs/ci-cd-system.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -324,11 +354,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../release_notes/ghaf-24.09.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../technologies/hypervisor_options.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../release_notes/ghaf-24.03.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../scs/ci-cd-system.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

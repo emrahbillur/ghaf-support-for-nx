@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Release ghaf-24.06 - Ghaf Framework</title>
+        <title>x86: GPU Passthrough with qemu - Ghaf Framework</title>
 
 
         <!-- Custom HTML head -->
@@ -226,95 +226,83 @@
 
 </style>
 <!--
-    Copyright 2022-2024 TII (SSRC) and the Ghaf contributors
+    Copyright 2025 TII (SSRC) and the Ghaf contributors
     SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-<h1 id="release-ghaf-2406"><a class="header" href="#release-ghaf-2406">Release ghaf-24.06</a></h1>
-<h2 id="release-tag"><a class="header" href="#release-tag">Release Tag</a></h2>
-<p><a href="https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.06">https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.06</a></p>
-<h2 id="supported-hardware"><a class="header" href="#supported-hardware">Supported Hardware</a></h2>
-<p>The following target hardware is supported by this release:</p>
+<h1 id="x86-gpu-device-passthrough-with-qemu"><a class="header" href="#x86-gpu-device-passthrough-with-qemu">x86 GPU Device Passthrough with Qemu</a></h1>
+<h3 id="overview"><a class="header" href="#overview">Overview</a></h3>
 <ul>
-<li>NVIDIA Jetson AGX Orin</li>
-<li>NVIDIA Jetson Orin NX</li>
-<li>Generic x86 (PC)</li>
-<li>Polarfire Icicle Kit</li>
-<li>Lenovo ThinkPad X1 Carbon Gen 11</li>
-<li>Lenovo ThinkPad X1 Carbon Gen 10</li>
-<li>NXP i.MX 8M Plus</li>
+<li>GPU passthrough allows a virtual machine (VM) to use a dedicated GPU, enabling near-native performance for 3D workloads, media decoding/encoding and other GPU-intensive tasks.</li>
+<li>QEMU combined with libvirt is a common stack used for this on Linux.</li>
 </ul>
-<h2 id="what-is-new-in-ghaf-2406"><a class="header" href="#what-is-new-in-ghaf-2406">What is New in ghaf-24.06</a></h2>
+<h3 id="1-requirements"><a class="header" href="#1-requirements">1. Requirements</a></h3>
+<p><strong>Hardware</strong></p>
 <ul>
-<li>Added support for NXP i.MX 8M Plus.</li>
-<li>NixOS is updated to <a href="https://nixos.org/blog/announcements/2024/nixos-2405/">NixOS 24.05</a> further to nixos-unstable.</li>
-<li>labwc is used as a default compositor on all platforms. Weston is no longer supported.</li>
-<li>Static networking with external DNS server support only. Internal DHCP and DNS are removed.
+<li>CPU with IOMMU support:
 <ul>
-<li>This affects all new guest VM networking.</li>
-<li>Windows VM must be configured with static IP and DNS.</li>
+<li>Intel VT-d (Intel IOMMU)</li>
+<li>AMD-Vi (AMD)</li>
 </ul>
 </li>
-<li>Lenovo X1 Carbon Gen 10/11:
-<ul>
-<li>Image compression uses the <a href="https://github.com/facebook/zstd">Zstandard (zstd)</a> algorithm.</li>
-<li>Initial vTPM implementation for Application VMs is added.</li>
-<li>Audio VM with <a href="https://gitlab.freedesktop.org/pipewire/pipewire">PipeWire</a> backend and <a href="https://www.freedesktop.org/wiki/Software/PulseAudio/">PulseAudio</a> TCP remote communications layer.</li>
-<li>Multimedia function key passthrough.</li>
-<li>Initial implementation of <a href="../architecture/adr/idsvm.html">IDS VM</a> as a defensive network mechanism.</li>
-<li>Support for <a href="https://element.io/">Element</a> chat application.</li>
-<li>GPS location sharing through the Element application.</li>
 </ul>
+<h3 id="2-enable-iommu-in-the-bootloader"><a class="header" href="#2-enable-iommu-in-the-bootloader">2. Enable IOMMU in the Bootloader</a></h3>
+<ul>
+<li>
+<p>Make sure following parameters added to kernel command line.</p>
+<pre><code class="language-sh"># For Intel CPUs
+"intel_iommu=on"
+
+# For AMD CPUs
+"amd_iommu=on"
+</code></pre>
 </li>
-<li>NVIDIA Jetson Orin NX:
-<ul>
-<li>UARTI passthrough.</li>
-<li>The Jetpack baseline software updates and fixes.</li>
 </ul>
+<h3 id="3-identify-the-gpu"><a class="header" href="#3-identify-the-gpu">3. Identify the GPU</a></h3>
+<ul>
+<li>
+<p>List devices</p>
+<pre><code class="language-sh">lspci -nn
+</code></pre>
 </li>
-<li>Further refactoring and modularization of Ghaf Framework.</li>
-<li>Development, testing, and performance tooling improvements.</li>
 </ul>
-<h2 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h2>
-<p>Fixed bugs that were in the ghaf-24.03 release:</p>
+<h3 id="4-isolate-gpu-with-vfio"><a class="header" href="#4-isolate-gpu-with-vfio">4. Isolate GPU with VFIO</a></h3>
 <ul>
-<li>Icons do not launch applications when a netvm is restarted.</li>
-<li>Closing and reopening a deck lid of a Lenovo ThinkPad X1 laptop with Ghaf running causes instability.</li>
+<li>Blacklist the GPU driver on the host system so it won't be used. Example
+<pre><code class="language-sh"># For Intel GPUs
+"module_blacklist=i915,xe"
+</code></pre>
+</li>
+<li>Bind Devices to VFIO
+<pre><code class="language-sh">options vfio-pci.ids=&lt;VendorId&gt;:&lt;DeviceId&gt;
+</code></pre>
+</li>
 </ul>
-<h2 id="known-issues-and-limitations"><a class="header" href="#known-issues-and-limitations">Known Issues and Limitations</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Issue</th><th>Status</th><th>Comments</th></tr></thead><tbody>
-<tr><td>Cannot log in to the Element chat with a Google account</td><td>In Progress</td><td>Workaround for x86: create a user specifically for Element.</td></tr>
-<tr><td>Windows launcher application does not work on AGX</td><td>In Progress</td><td>Workaround: launch a Windows VM from the command line.</td></tr>
-<tr><td>Time synchronization between host and VMs does not work in all scenarios</td><td>In Progress</td><td>Under investigation.</td></tr>
-<tr><td>Applications do not open from icons when netvm is restarted</td><td>In Progress</td><td>Workaround: restart AppVMs.</td></tr>
-<tr><td>Cannot connect to a hidden Wi-Fi network from GUI</td><td>In Progress</td><td>Workaround:  connect with SSH to a netvm and run the command: <code>nmcli dev wifi connect SSID password PASSWORD hidden yes</code>.</td></tr>
-<tr><td>NVIDIA Jetson AGX Orin and NVIDIA Jetson Orin NX: cannot make voice calls using the Element application</td><td>In Progress</td><td>Under investigation.</td></tr>
-<tr><td>The Element application cannot find a camera</td><td>In Progress</td><td>Under investigation.</td></tr>
-</tbody></table>
-</div>
-<h2 id="environment-requirements"><a class="header" href="#environment-requirements">Environment Requirements</a></h2>
-<p>There are no specific requirements for the environment with this release.</p>
-<h2 id="installation-instructions"><a class="header" href="#installation-instructions">Installation Instructions</a></h2>
-<p>Released images are available at <a href="https://archive.vedenemo.dev/ghaf-24.06/">archive.vedenemo.dev/ghaf-24.06</a>.</p>
-<p>Download the required image and use the following instructions:</p>
-<div class="table-wrapper"><table><thead><tr><th>Release Image</th><th>Build and Run</th></tr></thead><tbody>
-<tr><td>ghaf-24.06_Generic_x86.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-x86-computer">Running Ghaf Image for x86 Computer</a></td></tr>
-<tr><td>ghaf-24.06_Lenovo_X1_Carbon_Gen11.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-lenovo-x1">Running Ghaf Image for Lenovo X1</a></td></tr>
-<tr><td>ghaf-24.06_Nvidia_Orin_AGX_cross-compiled.tar.xz, ghaf-24.06_Nvidia_Orin_AGX_native-build.tar.xz, ghaf-24.06_Nvidia_Orin_NX_cross-compiled.tar.xz, ghaf-24.06_Nvidia_Orin_NX_native-build.tar.xz</td><td><a href="../ref_impl/build_and_run.html#ghaf-image-for-nvidia-jetson-orin-agx">Ghaf Image for NVIDIA Jetson Orin AGX</a></td></tr>
-<tr><td>ghaf-24.06_PolarFire_RISC-V.tar.xz</td><td><a href="../ref_impl/build_and_run.html#building-ghaf-image-for-microchip-icicle-kit">Building Ghaf Image for Microchip Icicle Kit</a></td></tr>
-</tbody></table>
-</div><!--
-    There is no image for NXP i.MX 8M Plus. We say that we added the nxp support in this release but there is no image to try it. Yes, this is dog.
--->
+<h3 id="5-verify-gpu-passthrough-works-in-qemu"><a class="header" href="#5-verify-gpu-passthrough-works-in-qemu">5. Verify GPU Passthrough Works in QEMU</a></h3>
+<p>On Graphics VM (<code>gui-vm</code>) run the following commands.</p>
+<ul>
+<li>
+<p>To verifiy PCI device passthrough:</p>
+<pre><code class="language-sh">lspci | grep VGA
+</code></pre>
+</li>
+<li>
+<p>Check the driver:</p>
+<pre><code class="language-sh">$ lshw -c display
+</code></pre>
+</li>
+</ul>
+<h3 id="limitation"><a class="header" href="#limitation">Limitation</a></h3>
+<p>With GPU passthrough to a specific VM, the GPU cannot be used for other VMs. However, sometimes we may need the GPU to be shared across different VMs, which is not possible with the current implementation.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../release_notes/ghaf-24.09.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../technologies/device_tree_overlays_pt.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../release_notes/ghaf-24.03.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../technologies/nvidia_virtualization_bpmp.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -324,11 +312,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../release_notes/ghaf-24.09.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../technologies/device_tree_overlays_pt.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../release_notes/ghaf-24.03.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../technologies/nvidia_virtualization_bpmp.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

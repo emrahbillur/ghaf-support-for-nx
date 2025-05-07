@@ -24,17 +24,18 @@
         <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../highlight.css">
-        <link rel="stylesheet" href="../tomorrow-night.css">
-        <link rel="stylesheet" href="../ayu-highlight.css">
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
 
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -44,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -59,7 +60,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -72,8 +74,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -109,6 +111,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -307,6 +310,10 @@ To see all Ghaf-supported outputs, type <code>nix flake show</code>.</li>
 <p>Run the command:</p>
 <pre><code>nix build github:tiiuae/ghaf#nvidia-jetson-orin-agx-debug-flash-script
 </code></pre>
+<p>The above command is for AGX 32GB version. For the AGX 64GB RAM version please
+use:</p>
+<pre><code>nix build github:tiiuae/ghaf#nvidia-jetson-orin-agx64-debug-flash-script
+</code></pre>
 <p>It will build the Ghaf image and bootloader firmware, and prepare the flashing script. Give "yes" answers to all script questions. The building process takes around 1,5 hours.</p>
 </li>
 <li>
@@ -342,6 +349,10 @@ To see all Ghaf-supported outputs, type <code>nix flake show</code>.</li>
 <ol>
 <li>To build the target image, run the command:
 <pre><code>nix build github:tiiuae/ghaf#nvidia-jetson-orin-agx-debug-from-x86_64
+</code></pre>
+The above command is for AGX 32GB version. For the AGX 64GB RAM version please
+use:
+<pre><code>nix build github:tiiuae/ghaf#nvidia-jetson-orin-agx64-debug
 </code></pre>
 </li>
 <li>After the build is completed, prepare a USB boot media with the target image you built using the <code>flash.sh</code> script:
