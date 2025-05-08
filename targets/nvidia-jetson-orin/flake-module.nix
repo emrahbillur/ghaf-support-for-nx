@@ -92,6 +92,7 @@ let
               };
 
               host.networking.enable = true;
+              host.networking.bridgeNicName = "fog-lan";
 
               # Create admin home folder; temporary solution
               users.admin.createHome = true;
@@ -114,6 +115,21 @@ let
               reference.personalize.keys.enable = variant == "debug";
 
               reference.host-demo-apps.demo-apps.enableDemoApplications = true;
+
+              common.extraNetworking.hosts = {
+                net-vm = {
+                  ipv4 = builtins.trace "ipv4 set for net-vm" lib.mkForce "192.168.101.129";
+                  mac = lib.mkForce "02:AD:00:00:00:FA";
+                  # interfaceName = lib.mkForce "new-nic";
+                };
+                ghaf-host = {
+                  ipv4 = lib.mkForce "192.168.101.121";
+                  #interfaceName = lib.mkForce "foglan";
+                  # gives assertion error as expected
+                  # mac = lib.mkForce "DE:AD:BE:EF:00:02";
+                  # gives assertion error as expected
+                };
+              };
             };
 
             nixpkgs = {
@@ -126,6 +142,7 @@ let
                 #jitsi was deemed insecure because of an obsecure potential security
                 #vulnerability but it is still used by many people
                 permittedInsecurePackages = [
+                  0
                   "jitsi-meet-1.0.8043"
                 ];
               };
