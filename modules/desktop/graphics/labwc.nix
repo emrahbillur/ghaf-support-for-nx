@@ -147,7 +147,7 @@ in
     environment = {
       systemPackages = [
         pkgs.labwc
-        pkgs.ghaf-theme
+        #pkgs.ghaf-theme
         pkgs.papirus-icon-theme
         pkgs.adwaita-icon-theme
 
