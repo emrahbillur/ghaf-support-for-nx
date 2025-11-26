@@ -22,7 +22,7 @@
 
   inputs = {
     #TODO: carrying the extra patch(es) until merged to unstable
-    nixpkgs.url = "github:tiiuae/nixpkgs/cosmic-beta5";
+    nixpkgs.url = "github:tiiuae/nixpkgs/26443da4b49f9d9656c7a174fced4a75333dd637";
     #nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # A framework for testing ghaf configurations
