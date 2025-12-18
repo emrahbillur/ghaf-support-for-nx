@@ -23,10 +23,14 @@
             pcie@14100000 {
                 iommus = <>;
             };
+        };
+    };
+    fragment@1 {
+        target-path = "/bus@0";
+        __overlay__ {
             pcie@14180000 {
                 iommus = <>;
             };
         };
     };
-
 };
