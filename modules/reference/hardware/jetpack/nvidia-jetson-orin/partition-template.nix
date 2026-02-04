@@ -155,25 +155,52 @@ in
       #"${pkgs.pkgsBuildBuild.patch}/bin/patch" -p0 < ${./tegra2-mb2-bct-scr.patch}
     ''
     + lib.optionalString (!cfg.flashScriptOverrides.onlyQSPI) ''
-      ESP_OFFSET=$(cat "${images}/esp.offset")
-      ESP_SIZE=$(cat "${images}/esp.size")
-      ROOT_OFFSET=$(cat "${images}/root.offset")
-      ROOT_SIZE=$(cat "${images}/root.size")
+       ESP_OFFSET=$(cat "${images}/esp.offset")
+       ESP_SIZE=$(cat "${images}/esp.size")
+       ROOT_OFFSET=$(cat "${images}/root.offset")
+       ROOT_SIZE=$(cat "${images}/root.size")
+       echo "ESP_OFFSET: $ESP_OFFSET"
+       echo "ESP_SIZE: $ESP_SIZE"
+       echo "ROOT_OFFSET: $ROOT_OFFSET"
+       echo "ROOT_SIZE: $ROOT_SIZE"
+      # Prompt only in interactive terminals; do nothing in CI/non‑TTY
+       if [ -t 0 ]; then
+         unset -f read 2>/dev/null || true
+         builtin read -r -s -n 1 -p "Press any key to continue with extracting partitions from ${images}/sd-image/ ..." _ || true
+         echo
+       elif [ -e /dev/tty ]; then
+         # Under some sudo setups, stdin isn't a TTY; fall back to /dev/tty
+         unset -f read 2>/dev/null || true
+         builtin read -r -s -n 1 -p "Press any key to continue with extracting partitions from ${images}/sd-image/ ..." _ < /dev/tty || true
+         echo
+       fi
 
-      img="${images}/sd-image/${config.image.fileName}"
-      echo "Extracting ESP partition to $WORKDIR/bootloader/esp.img ..."
-      dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/esp.img" bs=512 iseek="$ESP_OFFSET" count="$ESP_SIZE"
-      echo "Extracting root partition to $WORKDIR/root.img ..."
-      dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/root.img" bs=512 iseek="$ROOT_OFFSET" count="$ROOT_SIZE"
+       img="${images}/sd-image/${config.image.fileName}"
+       echo "Extracting ESP partition to $WORKDIR/bootloader/esp.img ..."
+       dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/esp.img" bs=512 iseek="$ESP_OFFSET" count="$ESP_SIZE"
+       echo "Extracting root partition to $WORKDIR/root.img ..."
+       dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/root.img" bs=512 iseek="$ROOT_OFFSET" count="$ROOT_SIZE"
 
-      echo "Patching flash.xml with absolute paths to esp.img and root.img ..."
-      "${pkgs.pkgsBuildBuild.gnused}/bin/sed" -i \
-        -e "s#bootloader/esp.img#$WORKDIR/bootloader/esp.img#" \
-        -e "s#root.img#$WORKDIR/root.img#" \
-        -e "s#ESP_SIZE#$((ESP_SIZE * 512))#" \
-        -e "s#ROOT_SIZE#$((ROOT_SIZE * 512))#" \
-        flash.xml
+       echo "Patching flash.xml with absolute paths to esp.img and root.img ..."
+       "${pkgs.pkgsBuildBuild.gnused}/bin/sed" -i \
+         -e "s#bootloader/esp.img#$WORKDIR/bootloader/esp.img#" \
+         -e "s#root.img#$WORKDIR/root.img#" \
+         -e "s#ESP_SIZE#$((ESP_SIZE * 512))#" \
+         -e "s#ROOT_SIZE#$((ROOT_SIZE * 512))#" \
+         flash.xml
 
+
+      # Prompt only in interactive terminals; do nothing in CI/non‑TTY
+       if [ -t 0 ]; then
+         unset -f read 2>/dev/null || true
+         builtin read -r -s -n 1 -p "Press any key to continue with extracting partitions from ${images}/sd-image/ ..." _ || true
+         echo
+       elif [ -e /dev/tty ]; then
+         # Under some sudo setups, stdin isn't a TTY; fall back to /dev/tty
+         unset -f read 2>/dev/null || true
+         builtin read -r -s -n 1 -p "Press any key to continue with extracting partitions from ${images}/sd-image/ ..." _ < /dev/tty || true
+         echo
+       fi
     ''
     + lib.optionalString cfg.flashScriptOverrides.onlyQSPI ''
       echo "Flashing QSPI only, boot and root images not included."
