@@ -22,6 +22,7 @@ in
     enable = mkEnableOption "Orin hardware";
 
     flashScriptOverrides.onlyQSPI = mkEnableOption "to only flash QSPI partitions, i.e. disable flashing of boot and root partitions to eMMC";
+    flashScriptOverrides.extUSB = mkEnableOption "to flash external USB partitions";
 
     flashScriptOverrides.preFlashCommands = mkOption {
       description = "Commands to run before the actual flashing";

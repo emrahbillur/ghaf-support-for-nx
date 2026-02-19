@@ -434,11 +434,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770305784,
-        "narHash": "sha256-nW9oPaLcadNVjObJrlP29iWX/8wa066HMAxLha88VKY=",
+        "lastModified": 1770712349,
+        "narHash": "sha256-/4HYFyfZW0jWOQcUnaBQQ2J4Ka8VnsGaIs5+6MiJpbg=",
         "owner": "emrahbillur",
         "repo": "jetpack-nixos",
-        "rev": "3f8fbb4722f12f232eae78b402337ae76b43d188",
+        "rev": "9efdad84671e3dc56e0a1aa712367033ef88bcc9",
         "type": "github"
       },
       "original": {

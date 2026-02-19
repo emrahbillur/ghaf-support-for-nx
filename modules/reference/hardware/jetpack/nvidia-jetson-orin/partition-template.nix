@@ -15,6 +15,15 @@ let
   cfg = config.ghaf.hardware.nvidia.orin;
 
   images = config.system.build.${config.formatAttr};
+  partitionsUSB_start = pkgs.writeText "usbstart.txt" ''
+    <device type="sdcard" instance="0" sector_size="512" num_sectors="INT_NUM_SECTORS">
+  '';
+  partitionsDevice_end = pkgs.writeText "deviceend.txt" ''
+    </device>
+  '';
+  partitionsNVME_start = pkgs.writeText "nvmestart.txt" ''
+    <device type="nvme" instance="4" sector_size="512" num_sectors="INT_NUM_SECTORS" >
+  '';
   partitionsEmmc = pkgs.writeText "sdmmc.xml" ''
     <partition name="master_boot_record" type="protective_master_boot_record">
       <allocation_policy> sequential </allocation_policy>
@@ -114,10 +123,30 @@ let
       head -n ${toString partitionTemplateReplaceRange.firstLineCount} ${pkgs.nvidia-jetpack.bspSrc}/bootloader/generic/cfg/flash_t234_qspi_sdmmc_industrial.xml >"$out"
 
     ''
+    +
+      lib.optionalString
+        ((config.hardware.nvidia-jetpack.som == "orin-nx") && cfg.flashScriptOverrides.extUSB)
+        ''
+
+          cat ${partitionsUSB_start} >>"$out"
+        ''
+    +
+      lib.optionalString
+        ((config.hardware.nvidia-jetpack.som == "orin-nx") && (!cfg.flashScriptOverrides.extUSB))
+        ''
+
+          cat ${partitionsNVME_start} >>"$out"
+        ''
     + lib.optionalString (!cfg.flashScriptOverrides.onlyQSPI) ''
 
       # Replace the section for sdmmc-device with our own section
       cat ${partitionsEmmc} >>"$out"
+
+    ''
+    + lib.optionalString (config.hardware.nvidia-jetpack.som == "orin-nx") ''
+
+      # Replace the section for sdmmc-device with our own section
+      cat ${partitionsDevice_end} >>"$out"
 
     ''
     + lib.optionalString (config.hardware.nvidia-jetpack.som != "orin-agx-industrial") ''
@@ -132,7 +161,7 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    hardware.nvidia-jetpack.flashScriptOverrides.partitionTemplate = partitionTemplate;
+    hardware.nvidia-jetpack.flashScriptOverrides.partitionTemplate = (builtins.trace partitionTemplate.name) partitionTemplate;
     hardware.nvidia-jetpack.flashScriptOverrides.preFlashCommands = ''
       echo "============================================================"
       echo "ghaf flashing script"
@@ -179,8 +208,8 @@ in
        echo "Extracting ESP partition to $WORKDIR/bootloader/esp.img ..."
        dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/esp.img" bs=512 iseek="$ESP_OFFSET" count="$ESP_SIZE"
        echo "Extracting root partition to $WORKDIR/root.img ..."
-       dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/bootloader/root.img" bs=512 iseek="$ROOT_OFFSET" count="$ROOT_SIZE"
-
+       dd if=<("${pkgs.pkgsBuildBuild.zstd}/bin/pzstd" -d "$img" -c) of="$WORKDIR/root.img" bs=512 iseek="$ROOT_OFFSET" count="$ROOT_SIZE"
+       cp -v "$WORKDIR/root.img" "$WORKDIR/system.img"
        echo "Patching flash.xml with absolute paths to esp.img and root.img ..."
        "${pkgs.pkgsBuildBuild.gnused}/bin/sed" -i \
          -e "s#bootloader/esp.img#$WORKDIR/bootloader/esp.img#" \
@@ -188,7 +217,6 @@ in
          -e "s#ESP_SIZE#$((ESP_SIZE * 512))#" \
          -e "s#ROOT_SIZE#$((ROOT_SIZE * 512))#" \
          flash.xml
-
 
       # Prompt only in interactive terminals; do nothing in CI/non‑TTY
        if [ -t 0 ]; then
