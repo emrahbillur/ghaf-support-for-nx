@@ -218,10 +218,20 @@ let
             sleep 1
           done
 
-          echo /dev/mmcblk0 > "$gadget/functions/mass_storage.usb0/lun.0/file" 2>/dev/null || {
-            sleep 1
-            echo /dev/mmcblk0 > "$gadget/functions/mass_storage.usb0/lun.0/file"
-          }
+          # Detect the real eMMC user area device
+          EMMC_USER=""
+          for dev in /sys/block/mmcblk*/size; do
+              sz=$(cat "$dev" 2>/dev/null || echo 0)
+              if [ "$sz" -gt 100000 ]; then
+                  base=$(echo "$dev" | sed 's#/size$##')
+                  EMMC_USER="/dev/$(basename $base)"
+              fi
+          done
+
+          # Fallback for early initrd:
+          [ -e "$EMMC_USER" ] || EMMC_USER="/dev/mmcblk0"
+
+          echo "$EMMC_USER" > "$gadget/functions/mass_storage.usb0/lun.0/file"
           echo 0 > "$gadget/functions/mass_storage.usb0/lun.0/ro"
 
           # Link ACM FIRST
@@ -272,36 +282,61 @@ let
           done
 
           # >>> ADD THIS: put the device-side serial in raw, no-echo mode <<<
-          stty -F "$ttyGS" 115200 raw -echo -echoe -echok -icanon -opost -isig -ixon -ixoff 2>/dev/null || true
+          stty -F "$ttyGS" 115200 raw -echo -echoe -echok -icanon -opost -isig -ixon -ixoff min 0 time 1 2>/dev/null || true
 
           # Drain stale bytes produced during gadget rebind so we do NOT miss host's IMAGES_DONE
           dd if="$ttyGS" of=/dev/null bs=1 count=1024 2>/dev/null || true
 
+          # --- Permenant R/W fd open: prevents first line loss after tegra-xudc rebind ---
+          echo "Opening persistent fd to $ttyGS..."
+          opened=0
+          for n in 1 2 3 4 5; do
+            exec 3<> "$ttyGS" && opened=1 && break
+            sleep 1
+          done
+          [ "$opened" -eq 1 ] || { echo "ERROR: cannot open $ttyGS"; reboot -f; }
+
           # Proactively send EMMC_READY several times to survive host open races
           for i in 1 2 3 4 5; do
             echo "EMMC_READY"
-            [ -e "$ttyGS" ] && echo "EMMC_READY" > "$ttyGS" 2>/dev/null || true
+            printf 'EMMC_READY\n' >&3 2>/dev/null || true
             sleep 1
           done
 
           # Wait for host to finish writing images (timeout: 30 min)
+          echo "Serial ready on $ttyGS; entering IMAGES_DONE wait loop..."
           echo "Waiting for host to write OS images..."
           wait_secs=0
           got_done=0
           resend_tick=0
           while [ $wait_secs -lt 1800 ]; do
+          # FD-3 liveness: tty reset olduysa yeniden aç
+            if ! : >&3 2>/dev/null; then
+              exec 3<> "$ttyGS" 2>/dev/null || true
+              # line discipline toparlansın
+              usleep 100000 2>/dev/null || sleep 0.1
+            fi
             # Periodically re-emit EMMC_READY while waiting (every 5s)
             resend_tick=$((resend_tick + 1))
             if [ $((resend_tick % 5)) -eq 0 ]; then
-              [ -e "$ttyGS" ] && echo "EMMC_READY" > "$ttyGS" 2>/dev/null || true
+              printf 'EMMC_READY\n' >&3 2>/dev/null || true
             fi
 
-            if IFS= read -r -t 1 line < "$ttyGS" 2>/dev/null; then
+            if IFS= read -r -t 1 line <&3 2>/dev/null; then
+              line="''${line%$'\r'}"
               echo "  [host] $line"
               case "$line" in
-                IMAGES_DONE*) got_done=1; break ;;
+                IMAGES_DONE*)
+                  got_done=1
+                  printf 'IMAGES_ACK\n' >&3 2>/dev/null || true
+                  usleep 100000 2>/dev/null || sleep 0.1
+                  printf 'IMAGES_ACK\n' >&3 2>/dev/null || true
+                  break
+                  ;;
                 # Host probe to trigger a fresh EMMC_READY if it missed earlier emits
-                EMMC_QUERY*) [ -e "$ttyGS" ] && echo "EMMC_READY" > "$ttyGS" 2>/dev/null || true ;;
+                EMMC_QUERY*)
+                  printf 'EMMC_READY\n' >&3 2>/dev/null || true
+                  ;;
               esac
             fi
 
@@ -314,7 +349,7 @@ let
             echo "============================================================"
             echo "Flashing platform firmware successful"
             echo "============================================================"
-            [ -e "$ttyGS" ] && echo "Flashing platform firmware successful" > "$ttyGS"
+            printf 'Flashing platform firmware successful\n' >&3 2>/dev/null || true
           fi
           sync
           sleep 2
@@ -527,23 +562,35 @@ let
           local timeout="$3"
           local end=$((SECONDS + timeout))
           echo "Waiting for message: $msg (timeout: ''${timeout}s)"
+
+          # Open port once (FD 9), do not reopen or close again
+          exec 9< "$port" 2>/dev/null || true
+
           while [ $SECONDS -lt $end ]; do
+            # If port is lost reopen
             if [ ! -e "$port" ]; then
               sleep 1
+              exec 9< "$port" 2>/dev/null || true
               continue
             fi
-            if IFS= read -r -t 1 line < "$port" 2>/dev/null; then
+
+            # Read from FD 9 (CR/LF normalize)
+            if IFS= read -r -t 1 -u 9 line 2>/dev/null; then
+              line="''${line%$'\r'}"
               echo "  [device] $line"
               case "$line" in
-                *"$msg"*) return 0 ;;
+                *"$msg"*) exec 9<&- 2>/dev/null || true; return 0 ;;
                 *"unsuccessful"*)
                   echo "ERROR: Device reported failure"
+                  exec 9<&- 2>/dev/null || true
                   return 1
                   ;;
               esac
             fi
           done
+
           echo "ERROR: Timed out waiting for: $msg"
+          exec 9<&- 2>/dev/null || true
           return 1
         }
 
@@ -616,7 +663,7 @@ let
           echo "ERROR: serial port did not appear"; exit 1; }
 
         # Configure serial port for raw I/O
-        stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok
+        stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok min 0 time 1
 
         # Monitor firmware flash progress
         wait_for_message "$SERIAL_PORT" "FIRMWARE_DONE" 900
@@ -651,7 +698,10 @@ let
                 echo "ERROR: serial port did not reappear after rebind"; exit 1; }
 
               # Reconfigure serial after reconnect
-              stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok
+              stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok min 0 time 1
+
+              # Drain buffers
+              dd if="$SERIAL_PORT" of=/dev/null bs=1 count=1024 2>/dev/null || true
 
               wait_for_emmc_ready_or_msd "$SERIAL_PORT" 600 || {
                 echo "ERROR: Timed out waiting for EMMC_READY and no mass storage detected"; exit 1;
@@ -691,7 +741,7 @@ let
                   break
                 fi
                 sleep 0.25
-              done  
+              done
 
               FLASH_IMAGES="${ghafFlashImages}"
               echo "Writing ESP image to ''${EMMC_DEV}1"
@@ -706,24 +756,31 @@ let
               # Re-discover serial in case the by-id symlink changed during the long writes
               SERIAL_PORT="$(find_serial 600)" || {
                 echo "ERROR: serial port disappeared after writes"; exit 1; }
-              stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok
+              stty -F "$SERIAL_PORT" 115200 raw -echo -echoe -echok min 0 time 1
 
-              # Signal completion to device with retries; accept either the new or old final banner
+              # Empty the lines that may come from the device for a clean start
+              dd if="$SERIAL_PORT" of=/dev/null bs=1 count=1024 2>/dev/null || true
+
+              # Signal completion to device with retries; accept ACK or final banner
               trap - EXIT
-              for _ in $(seq 1 600); do  # retry for up to 10 minutes
-                # Send the line the device is waiting for
+              for _ in $(seq 1 60); do   # ~5–6 minutes total (60 * (1 + waits))
                 printf 'IMAGES_DONE\n' > "$SERIAL_PORT" 2>/dev/null || true
 
-                # Preferred banner (your current device prints this)
-                if wait_for_message "$SERIAL_PORT" "Flashing platform firmware successful" 3; then
-                  echo "Flash complete. Device is rebooting."
-                  exit 0
-                fi
-
-                # Backward-compatible banner some variants use
-                if wait_for_message "$SERIAL_PORT" "Finished flashing device" 1; then
-                  echo "Flash complete. Device is rebooting."
-                  exit 0
+                # Give device time to answer — ACM is flaky right after MSC heavy writes
+                if wait_for_message "$SERIAL_PORT" "IMAGES_ACK" 15; then
+                  # Got ACK — now wait up to 60s for banner (device may sync/reboot prep)
+                  if wait_for_message "$SERIAL_PORT" "Flashing platform firmware successful" 60 \
+                  || wait_for_message "$SERIAL_PORT" "Finished flashing device" 60; then
+                    echo "Flash complete. Device is rebooting."
+                    exit 0
+                  fi
+                else
+                  # No ACK yet, but accept final banner directly (older initrd / racey timing)
+                  if wait_for_message "$SERIAL_PORT" "Flashing platform firmware successful" 10 \
+                  || wait_for_message "$SERIAL_PORT" "Finished flashing device" 10; then
+                    echo "Flash complete. Device is rebooting."
+                    exit 0
+                  fi
                 fi
 
                 sleep 1
